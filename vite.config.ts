@@ -10,9 +10,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["apple-icon-180x180.png", "vite.svg"],
       manifest: {
-        name: "My Awesome App",
-        short_name: "MyApp",
-        description: "My Awesome App description",
+        name: "CalculateCoal",
+        short_name: "CalcCoal",
+        description: "Calculate Coal Price",
         theme_color: "#ffffff",
         icons: [
           {
