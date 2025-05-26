@@ -4,34 +4,95 @@ import "./App.css";
 
 function ControlButton({
   isSpeaking,
-  onToggleClick,
+  speechStarted,
+  onStart,
+  onStop,
+  onResume,
+  onPause,
 }: {
   isSpeaking: boolean;
-  onToggleClick: () => void;
+  speechStarted: boolean;
+  onStart: () => void;
+  onStop: () => void;
+  onResume: () => void;
+  onPause: () => void;
 }) {
   if (isSpeaking) {
-    return <button onClick={onToggleClick}>Stop</button>;
+    return (
+      <>
+        <button onClick={onStop}>Stop</button>
+        {speechStarted && <button onClick={onPause}>Pause</button>}
+      </>
+    );
   }
 
-  return <button onClick={onToggleClick}>Start</button>;
+  return (
+    <>
+      <button onClick={onStart}>Start</button>
+      {speechStarted && <button onClick={onResume}>Resume</button>}
+    </>
+  );
 }
 
 function App() {
   const articleRef = useRef(null);
+  const currentSection = useRef(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [textList, setTextList] = useState<string[]>([]);
+  const [speechStarted, setIsSpeechStarted] = useState(false);
+  const [textList, setTextList] = useState<Node[]>([]);
 
-  function toggleSpeaking() {
-    if (isSpeaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-    } else {
-      for (let paragraph of textList) {
-        const utterThis = new SpeechSynthesisUtterance(paragraph);
-        window.speechSynthesis.speak(utterThis);
-      }
-      setIsSpeaking(true);
+  function handleStart() {
+    currentSection.current = 0;
+    window.speechSynthesis.cancel();
+    for (let i = 0; i < textList.length; i++) {
+      const paragraph = textList[i];
+      const utterThis = new SpeechSynthesisUtterance(
+        paragraph.textContent || ""
+      );
+      utterThis.onstart = () => {
+        const parentNode = paragraph.parentNode;
+        if (parentNode instanceof HTMLElement) {
+          parentNode.classList.add("active");
+        }
+        paragraph.parentNode;
+      };
+      utterThis.onend = () => {
+        const parentNode = paragraph.parentNode;
+        if (parentNode instanceof HTMLElement) {
+          parentNode.classList.remove("active");
+        }
+        if (i === textList.length - 1) {
+          setIsSpeaking(false);
+          setIsSpeechStarted(false);
+        }
+      };
+
+      window.speechSynthesis.speak(utterThis);
     }
+    setIsSpeaking(true);
+    setIsSpeechStarted(true);
+  }
+
+  function handleStop() {
+    const activeNode = document.querySelectorAll(".active");
+
+    for (let element of activeNode) {
+      element.classList.remove("active");
+    }
+
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+    setIsSpeechStarted(false);
+  }
+
+  function handleResume() {
+    window.speechSynthesis.resume();
+    setIsSpeaking(true);
+  }
+
+  function handlePause() {
+    window.speechSynthesis.pause();
+    setIsSpeaking(false);
   }
 
   useEffect(() => {
@@ -55,10 +116,10 @@ function App() {
       }
     );
 
-    const texts: string[] = [];
+    const texts: Node[] = [];
     while (treeWalker.nextNode()) {
-      if (treeWalker.currentNode.textContent) {
-        texts.push(treeWalker.currentNode.textContent);
+      if (treeWalker.currentNode) {
+        texts.push(treeWalker.currentNode);
       }
     }
     setTextList(texts);
@@ -111,7 +172,14 @@ function App() {
         <p style={{ display: "none" }}>Hide me!</p>
       </article>
       <section>
-        <ControlButton isSpeaking={isSpeaking} onToggleClick={toggleSpeaking} />
+        <ControlButton
+          speechStarted={speechStarted}
+          isSpeaking={isSpeaking}
+          onPause={handlePause}
+          onStop={handleStop}
+          onResume={handleResume}
+          onStart={handleStart}
+        />
       </section>
     </>
   );
